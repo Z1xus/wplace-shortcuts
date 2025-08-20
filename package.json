@@ -1,0 +1,54 @@
+{
+	"name": "wplace-shortcuts",
+	"version": "1.0.0",
+	"description": "configurable keyboard shortcuts for https://wplace.live (color picker and paint key)",
+	"module": "src/index.ts",
+	"type": "module",
+	"repository": {
+		"type": "git",
+		"url": "git+https://github.com/z1xus/wplace-shortcuts.git"
+	},
+	"bugs": {
+		"url": "https://github.com/z1xus/wplace-shortcuts/issues"
+	},
+	"homepage": "https://github.com/z1xus/wplace-shortcuts#readme",
+	"userscriptHeader": {
+		"@match": [
+			"https://wplace.live/*",
+			"https://*.wplace.live/*"
+		],
+		"@grant": [
+			"GM_registerMenuCommand",
+			"GM_getValue",
+			"GM_setValue"
+		],
+		"@run-at": "document-end",
+		"@noframes": "true",
+		"@name": "wplace shortcuts",
+		"@namespace": "https://github.com/z1xus/wplace-shortcuts"
+	},
+	"author": "z1xus",
+	"license": "MIT",
+	"devDependencies": {
+		"@types/bun": "latest",
+		"@types/yargs": "^17.0.33",
+		"prettier": "^3.6.2",
+		"rimraf": "^6.0.1",
+		"type-fest": "^4.26.1",
+		"winston": "^3.14.2",
+		"yargs": "^17.7.2"
+	},
+	"peerDependencies": {
+		"typescript": "^5.6.2"
+	},
+	"scripts": {
+		"build": "bun build.ts",
+		"build:dev": "bun build.ts --dev",
+		"build:watch": "bun build.ts --dev --watch",
+		"build:workflow": "bun build.ts --release-channel GitHubRelease",
+		"clean": "rimraf ./dist/",
+		"dev": "bun build.ts --dev --server --watch",
+		"format": "prettier --write ."
+	},
+	"dependencies": {}
+}
