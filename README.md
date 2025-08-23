@@ -17,6 +17,7 @@ Userscript that adds configurable shortcuts to `wplace.live`.
 
 Defaults:
 - Paint key: `E` — tap to place once; hold to paint continuously
+- Paint button key: `C` — clicks the bottom Paint button
 - Color picker key: `Q`
 - Auto-pick at cursor: enabled (opens the picker and immediately picks the color under your cursor)
 
