@@ -1,5 +1,6 @@
 type Cfg = {
 	paintKeyCode: string;
+	paintBtnKeyCode: string;
 	colorPickerKeyCode: string;
 	colorPickerSelector: string;
 	autoClickColorPicker: boolean;
@@ -7,6 +8,7 @@ type Cfg = {
 
 const DEFAULTS: Cfg = {
 	paintKeyCode: "KeyE",
+	paintBtnKeyCode: "KeyC",
 	colorPickerKeyCode: "KeyQ",
 	colorPickerSelector: 'button svg path[d^="M120-120v-190"]',
 	autoClickColorPicker: true
@@ -110,10 +112,50 @@ function openPicker(selector: string): boolean {
 		btn.click();
 		return true;
 	}
-	console.warn(
-		"[wplace-shortcuts] color picker button not found"
-	);
+	console.warn("[wplace-shortcuts] color picker button not found");
 	return false;
+}
+
+function findPaintBtn(): HTMLButtonElement | null {
+	const primaryBtns = Array.from(
+		document.querySelectorAll<HTMLButtonElement>("button.btn.btn-primary")
+	);
+	for (const b of primaryBtns) {
+		const text = (b.textContent || "").toLowerCase();
+		if (text.includes("paint")) return b;
+	}
+
+	const containers = Array.from(
+		document.querySelectorAll<HTMLElement>(
+			'div[class*="bottom-0"][class*="left-1/2"][class*="-translate-x-1/2"]'
+		)
+	);
+	for (const c of containers) {
+		const btn = Array.from(c.querySelectorAll<HTMLButtonElement>("button")).find((b) =>
+			(b.textContent || "").toLowerCase().includes("paint")
+		);
+		if (btn) return btn;
+	}
+
+	const ariaBtn = document.querySelector<HTMLButtonElement>(
+		'button[aria-label*="paint" i], button[title*="paint" i]'
+	);
+	if (ariaBtn) return ariaBtn;
+
+	return null;
+}
+
+function clickPaintBtn(): boolean {
+	const btn = findPaintBtn();
+	if (!btn) {
+		console.warn("[wplace-shortcuts] paint button not found");
+		return false;
+	}
+	if ((btn as HTMLButtonElement).disabled) {
+		return false;
+	}
+	btn.click();
+	return true;
 }
 
 let cx = 0;
@@ -246,11 +288,18 @@ function createSettingsPanel(config: Cfg, onChange: (c: Cfg) => void): HTMLEleme
       </div>
       <div class="row">
         <div>
+	          <div><strong>Paint button key</strong> <span class="key" data-key="paintbtn">${fmtKey(config.paintBtnKeyCode)}</span></div>
+          <div class="hint">Clicks the bottom Paint button</div>
+        </div>
+        <div><button data-action="set-paint-button">Change</button></div>
+      </div>
+      <div class="row">
+        <div>
           <div><strong>Color picker key</strong> <span class="key" data-key="picker">${fmtKey(config.colorPickerKeyCode)}</span></div>
         </div>
         <div><button data-action="set-picker">Change</button></div>
       </div>
-      <div class="row">
+      <div class="row" data-row="auto-pick">
         <div>
           <div><strong>Auto-pick at cursor</strong>
             <div class="hint">${config.autoClickColorPicker ? "Enabled (opens picker and picks at cursor)" : "Disabled (opens picker only)"}</div>
@@ -265,13 +314,15 @@ function createSettingsPanel(config: Cfg, onChange: (c: Cfg) => void): HTMLEleme
     </div>
   `;
 
-	let capturing: null | "paint" | "picker" = null;
+	let capturing: null | "paint" | "picker" | "paintbtn" = null;
 	function updateLabels(c: Cfg) {
 		const paintEl = panel!.querySelector('[data-key="paint"]') as HTMLElement;
 		const pickerEl = panel!.querySelector('[data-key="picker"]') as HTMLElement;
+		const paintBtnEl = panel!.querySelector('[data-key="paintbtn"]') as HTMLElement | null;
 		if (paintEl) paintEl.textContent = fmtKey(c.paintKeyCode);
 		if (pickerEl) pickerEl.textContent = fmtKey(c.colorPickerKeyCode);
-		const hint = panel!.querySelector(".row:nth-of-type(3) .hint") as HTMLElement | null;
+		if (paintBtnEl) paintBtnEl.textContent = fmtKey(c.paintBtnKeyCode);
+		const hint = panel!.querySelector('.row[data-row="auto-pick"] .hint') as HTMLElement | null;
 		const toggleBtn = panel!.querySelector(
 			'[data-action="toggle-picker-action"]'
 		) as HTMLButtonElement | null;
@@ -282,12 +333,11 @@ function createSettingsPanel(config: Cfg, onChange: (c: Cfg) => void): HTMLEleme
 		if (toggleBtn) toggleBtn.textContent = c.autoClickColorPicker ? "On" : "Off";
 	}
 
-	function beginCapture(which: "paint" | "picker") {
+	function beginCapture(which: "paint" | "picker" | "paintbtn") {
 		if (capturing) return;
 		capturing = which;
-		const label = panel!.querySelector(
-			`[data-key="${which === "paint" ? "paint" : "picker"}"]`
-		) as HTMLElement;
+		const keyKey = which === "paint" ? "paint" : which === "picker" ? "picker" : "paintbtn";
+		const label = panel!.querySelector(`[data-key="${keyKey}"]`) as HTMLElement;
 		const originalText = label.textContent || "";
 		label.textContent = "Press a key... (Esc to cancel)";
 
@@ -322,6 +372,7 @@ function createSettingsPanel(config: Cfg, onChange: (c: Cfg) => void): HTMLEleme
 			const next: Cfg = { ...readCfg() };
 			if (capturing === "paint") next.paintKeyCode = normalized;
 			if (capturing === "picker") next.colorPickerKeyCode = normalized;
+			if (capturing === "paintbtn") next.paintBtnKeyCode = normalized;
 			writeCfg(next);
 			onChange(next);
 			updateLabels(next);
@@ -343,6 +394,7 @@ function createSettingsPanel(config: Cfg, onChange: (c: Cfg) => void): HTMLEleme
 			updateLabels(DEFAULTS);
 		}
 		if (action === "set-paint") beginCapture("paint");
+		if (action === "set-paint-button") beginCapture("paintbtn");
 		if (action === "set-picker") beginCapture("picker");
 		if (action === "toggle-picker-action") {
 			const next = { ...readCfg(), autoClickColorPicker: !readCfg().autoClickColorPicker };
@@ -471,6 +523,16 @@ function main() {
 				const ok = openPicker(config.colorPickerSelector);
 				if (ok && config.autoClickColorPicker) {
 					queuePick();
+				}
+				return;
+			}
+
+			if (isKey(e, config.paintBtnKeyCode)) {
+				if (config.paintBtnKeyCode === "Space") return;
+				e.preventDefault();
+				e.stopPropagation();
+				if (!e.repeat) {
+					clickPaintBtn();
 				}
 				return;
 			}
