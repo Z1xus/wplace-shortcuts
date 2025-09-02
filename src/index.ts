@@ -17,7 +17,13 @@ const DEFAULTS: Cfg = {
 const STORE_KEY = "wplace_shortcuts_config_v2";
 
 function readCfg(): Cfg {
-	const stored = GM_getValue<Partial<Cfg>>(STORE_KEY, {});
+	let stored: Partial<Cfg> = {};
+	try {
+		stored = GM_getValue<Partial<Cfg>>(STORE_KEY, {});
+	} catch (err) {
+		console.warn("[wplace-shortcuts] failed to read config; using defaults", err);
+		stored = {};
+	}
 	const cfg: Cfg = {
 		...DEFAULTS,
 		...stored
@@ -26,7 +32,19 @@ function readCfg(): Cfg {
 }
 
 function writeCfg(config: Cfg): void {
-	GM_setValue(STORE_KEY, config);
+	try {
+		const maybePromise = (GM_setValue as unknown as (k: string, v: unknown) => unknown)(
+			STORE_KEY,
+			config
+		);
+		if (maybePromise && typeof (maybePromise as Promise<unknown>).then === "function") {
+			(maybePromise as Promise<unknown>).catch((err) => {
+				console.warn("[wplace-shortcuts] failed to save config", err);
+			});
+		}
+	} catch (err) {
+		console.warn("[wplace-shortcuts] failed to save config", err);
+	}
 }
 
 function normKey(inputRaw: string | null | undefined): string | null {

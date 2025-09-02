@@ -1,6 +1,6 @@
 {
 	"name": "wplace-shortcuts",
-	"version": "1.1.0",
+	"version": "1.1.1",
 	"description": "configurable keyboard shortcuts for https://wplace.live (color picker, paint key, paint button)",
 	"module": "src/index.ts",
 	"type": "module",
